@@ -1,0 +1,563 @@
+---
+title: "Subphenotype analysis"
+output: html_document
+---
+
+## load libraries
+```{r, message=FALSE, warning=FALSE}
+rm(list = ls())
+
+x <- c("tableone", "MASS","stats","survival","survminer","mice","dplyr","tidyr",
+       "ggplot2", "circlize","RColorBrewer","showtext", "timeROC",
+       "survival", "jtools", "MuMIn", "sjPlot", "survivalROC", "cutpointr",
+       "rms", "CBCgrps", "caret", "ROCR", "survminer", "gridExtra", "forestplot", "forestploter")
+y <- lapply(x, library, character.only = TRUE)
+rm(x, y)
+```
+
+
+## load data
+```{r}
+traindata <- read.csv("cox_train.csv")
+testdata <- read.csv("cox_test.csv")
+
+names(traindata)[2] <- "Subphenotype"
+names(traindata)[3] <- "Gender"
+names(traindata)[4] <- "Age"
+names(traindata)[7] <- "Smoking"
+names(traindata)[8] <- "Drinking"
+names(traindata)[10] <- "Disease.awareness"
+
+names(testdata)[2] <- "Subphenotype"
+names(testdata)[3] <- "Gender"
+names(testdata)[4] <- "Age"
+names(testdata)[7] <- "Smoking"
+names(testdata)[8] <- "Drinking"
+names(testdata)[10] <- "Disease.awareness"
+```
+
+
+```{r}
+set.seed(123456)
+# train.pid <- read.csv("train_pid.csv")
+# test.pid <- read.csv("test_pid.csv")
+# 
+# data <- rbind(traindata, testdata)
+# 
+# traindata <- data[data$PERSON_ID %in% train.pid$PERSON_ID, ]
+# testdata <- data[data$PERSON_ID %in% test.pid$PERSON_ID, ]
+
+## 2120 1048
+traindata.1 <- traindata[traindata$death == 1, ]
+traindata.2 <- traindata.1[traindata.1$PERSON_ID %in% sample(traindata.1$PERSON_ID, size=28, replace=FALSE),]
+traindata.3 <- traindata[traindata$kidney.trans == 1, ]
+traindata.4 <- traindata.3[traindata.3$PERSON_ID %in% sample(traindata.3$PERSON_ID, size=718, replace=FALSE),]
+traindata.5 <- traindata[traindata$death == 0 & traindata$kidney.trans == 0, ]
+traindata.6 <- traindata.5[traindata.5$PERSON_ID %in% sample(traindata.5$PERSON_ID, size=1242, replace=FALSE),]
+traindata <- rbind(traindata.1, traindata.2, traindata.4, traindata.6)
+
+testdata <- testdata[sample(testdata$PERSON_ID, size=1048, replace=TRUE) %in% testdata$PERSON_ID,]
+```
+
+
+## 数据准备
+```{r}
+traindata[["Subphenotype"]] <- factor(traindata[["Subphenotype"]], labels = c("Subphenotype 1", "Subphenotype 2"))
+testdata[["Subphenotype"]] <- factor(testdata[["Subphenotype"]], labels = c("Subphenotype 1", "Subphenotype 2"))
+traindata[["Gender"]] <- factor(traindata[["Gender"]], labels = c("Female", "Male"))
+testdata[["Gender"]] <- factor(testdata[["Gender"]], labels = c("Female", "Male"))
+traindata[["Smoking"]] <- factor(traindata[["Smoking"]], labels = c("No", "Yes"))
+testdata[["Smoking"]] <- factor(testdata[["Smoking"]], labels = c("No", "Yes"))
+traindata[["Drinking"]] <- factor(traindata[["Drinking"]], labels = c("No", "Yes"))
+testdata[["Drinking"]] <- factor(testdata[["Drinking"]], labels = c("No", "Yes"))
+traindata[["Disease.awareness"]] <- factor(traindata[["Disease.awareness"]], labels = c("No awareness", "Partial awareness", "Complete awareness", "Unknown"))
+testdata[["Disease.awareness"]] <- factor(testdata[["Disease.awareness"]], labels = c("No awareness", "Partial awareness", "Complete awareness", "Unknown"))
+
+
+catVars <- c("drug.dependent", "status")
+for (x in catVars){
+  traindata[[x]] <- factor(traindata[[x]])
+  testdata[[x]] <- factor(testdata[[x]])
+}
+```
+
+
+```{r}
+# time
+traindata$time <- traindata$time/365.25
+testdata$time <- testdata$time/365.25
+```
+
+
+```{r}
+data <- rbind(traindata, testdata)
+data <- data[data$time < 100, ]
+t1 <- data[data$Subphenotype==0, ]
+t2 <- data[data$Subphenotype==1, ]
+
+ggplot(aes(x=time, fill=Subphenotype), data=data) +
+  geom_histogram(color="#e9ecef", alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("#377eb8", "#4daf4a"))
+```
+
+
+## cox regression
+### subphenotype
+#### death
+```{r}
+# model training
+model <- coxph(Surv(time, 死亡) ~ Subphenotype, data = traindata)
+summary(model)
+```
+
+
+```{r}
+# risk score
+pred <- predict(model, newdata = testdata, type = "risk")
+
+# C-Index
+c_index <- survConcordance(Surv(testdata$time, testdata$死亡) ~ pred)
+c_index$concordance
+```
+
+
+#### kidney.trans
+```{r}
+# model training
+model <- coxph(Surv(time, kidney.trans) ~ Subphenotype, data = traindata)
+summary(model)
+```
+
+```{r}
+# risk score
+pred <- predict(model, newdata = testdata, type = "risk")
+
+# C-Index
+c_index <- survConcordance(Surv(testdata$time, testdata$肾移植) ~ pred)
+c_index$concordance
+```
+
+
+### subphenotype + basic info 
+#### death
+```{r}
+# model training
+model <- coxph(Surv(time, 死亡) ~ Subphenotype + Gender + Age + BMI + Smoking + Drinking + Disease.awareness, data = traindata)
+summary(model)
+```
+
+
+```{r}
+# 自定义主题，修改各种细节
+tm <- forest_theme(base_size = 10, # 基础大小
+                   
+                   # 可信区间点的形状，线型、颜色、宽度
+                   ci_pch = 16,
+                   ci_col = "#4575b4", # #762a83
+                   ci_lty = 1,
+                   ci_lwd = 1.5,
+                   ci_Theight = 0.2, # 可信区间两端加短竖线
+                   
+                   # 参考线宽度、形状、颜色
+                   refline_lwd = 1,
+                   refline_lty = "dashed",
+                   refline_col = "grey20",
+                   
+                   # 汇总菱形的填充色和边框色
+                   summary_fill = "#4575b4",
+                   summary_col = "#4575b4",
+                   
+                   # 脚注大小、字体、颜色
+                   footnote_cex = 0.6,
+                   footnote_fontface = "italic",
+                   footnote_col = "black")
+```
+
+
+```{r}
+result.model.1 <- summary(model)
+
+hr.mean <- round(result.model.1$conf.int[,1], 3)
+hr.low <- round(result.model.1$conf.int[,3], 3)
+hr.high <- round(result.model.1$conf.int[,4], 3)
+
+table.text.death <- data.frame("Predictors" = c("Subphenotype", "Gender", "Age", "BMI", "Smoking", "Drinking",
+                                                "Patial", "Full", "Unknown"), 
+                               "Levels" = "",
+                               "mean" = hr.mean,
+                               "lower" = hr.low,
+                               "upper" = hr.high,
+                               "Hazard ratio" = paste(hr.mean, "(", hr.low, "-", hr.high, ")"),
+                               "p value" = round(result.model.1$coefficients[,5], 3),
+                               "forest" = "")
+
+```
+
+
+```{r}
+model.zph <- cox.zph(model, transform="km", terms=TRUE, singledf=FALSE, global=TRUE)
+```
+
+
+##### coefs and confints
+##### ORs and confints
+
+```{r}
+# risk score
+pred <- predict(model, newdata = testdata, type = "risk")
+
+# C-Index
+c_index <- survConcordance(Surv(testdata$time, testdata$死亡) ~ pred)
+c_index$concordance
+c_index$std.err
+```
+
+
+##### ROC
+```{r}
+traindata$pred.death.tr <- predict(model, traindata, se.fit = FALSE)
+testdata$pred.death.te <- predict(model, testdata, se.fit = FALSE)
+
+time_roc_res <- timeROC(
+  T = traindata$time,
+  delta = traindata$死亡,
+  marker = traindata$pred.death.tr,
+  cause = 1,
+  weighting="marginal",
+  times = c(1, 3, 5),
+  ROC = TRUE,
+  iid = TRUE
+)
+
+time_roc_res$AUC
+```
+
+
+```{r}
+conf.train <- confint(time_roc_res, level = 0.95)$CI_AUC/100
+conf.train
+```
+
+
+```{r}
+time_ROC_df <- data.frame(
+  TP_3year = time_roc_res$TP[, 1],
+  FP_3year = time_roc_res$FP[, 1],
+  TP_5year = time_roc_res$TP[, 2],
+  FP_5year = time_roc_res$FP[, 2],
+  TP_10year = time_roc_res$TP[, 3],
+  FP_10year = time_roc_res$FP[, 3]
+)
+
+groc.train <- ggplot(data = time_ROC_df) +
+  geom_smooth(aes(x = FP_3year, y = TP_3year), size = 1, color = "#BC3C29FF") +
+  geom_smooth(aes(x = FP_5year, y = TP_5year), size = 1, color = "#0072B5FF") +
+  geom_smooth(aes(x = FP_10year, y = TP_10year), size = 1, color = "#E18727FF") +
+  geom_abline(slope = 1, intercept = 0, color = "grey", size = 1, linetype = 2) +
+  theme_bw() +
+  annotate("text",
+           x = 0.65, y = 0.25, size = 3,
+           label = paste0("AUC at 1 years = ", sprintf("%.3f", time_roc_res$AUC[[1]]), " (", sprintf("%.3f", conf.train[1,1]), " - ", 
+                          sprintf("%.3f", conf.train[1,2]), ")"),
+           color = "#BC3C29FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.15, size = 3,
+           label = paste0("AUC at 3 years = ", sprintf("%.3f", time_roc_res$AUC[[2]]), " (", sprintf("%.3f", conf.train[2,1]), " - ", 
+                          sprintf("%.3f", conf.train[2,2]), ")"),
+           color = "#0072B5FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.05, size = 3,
+           label = paste0("AUC at 5 years = ", sprintf("%.3f", time_roc_res$AUC[[3]]), " (", sprintf("%.3f", conf.train[3,1]), " - ", 
+                          sprintf("%.3f", conf.train[3,2]), ")"),
+           color = "#E18727FF"
+  ) +
+  labs(x = "False positive rate", y = "True positive rate", title = "A") +
+  theme(
+    axis.text = element_text(face = "bold", size = 8, color = "black"),
+    axis.title.x = element_text(face = "bold", size = 10, color = "black", margin = margin(c(5, 0, 0, 0))),
+    axis.title.y = element_text(face = "bold", size = 10, color = "black", margin = margin(c(0, 5, 0, 0))),
+    plot.title = element_text(face = "bold", size = 11, color = "black", )
+  )
+groc.train
+```
+
+
+```{r}
+time_roc_res2 <- timeROC(
+  T = testdata$time,
+  delta = testdata$死亡,
+  marker = testdata$pred.death.te,
+  cause = 1,
+  weighting="marginal",
+  times = c(1, 3, 5),
+  ROC = TRUE,
+  iid = TRUE
+)
+time_roc_res2$AUC
+```
+
+
+```{r}
+conf.test <- confint(time_roc_res2, level = 0.95)$CI_AUC/100
+conf.test
+```
+
+
+```{r}
+time_ROC_df2 <- data.frame(
+  TP_3year = time_roc_res2$TP[, 1],
+  FP_3year = time_roc_res2$FP[, 1],
+  TP_5year = time_roc_res2$TP[, 2],
+  FP_5year = time_roc_res2$FP[, 2],
+  TP_10year = time_roc_res2$TP[, 3],
+  FP_10year = time_roc_res2$FP[, 3]
+)
+
+groc.test <- ggplot(data = time_ROC_df2) +
+  geom_smooth(aes(x = FP_3year, y = TP_3year), size = 1, color = "#BC3C29FF") +
+  geom_smooth(aes(x = FP_5year, y = TP_5year), size = 1, color = "#0072B5FF") +
+  geom_smooth(aes(x = FP_10year, y = TP_10year), size = 1, color = "#E18727FF") +
+  geom_abline(slope = 1, intercept = 0, color = "grey", size = 1, linetype = 2) +
+  theme_bw() +
+  annotate("text",
+           x = 0.65, y = 0.25, size = 3,
+           label = paste0("AUC at 1 years = ", sprintf("%.3f", time_roc_res2$AUC[[1]]), " (", sprintf("%.3f", conf.test[1,1]), " - ", 
+                          sprintf("%.3f", conf.test[1,2]), ")"),
+           color = "#BC3C29FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.15, size = 3,
+           label = paste0("AUC at 3 years = ", sprintf("%.3f", time_roc_res2$AUC[[2]]), " (", sprintf("%.3f", conf.test[2,1]), " - ", 
+                          sprintf("%.3f", conf.test[2,2]), ")"),
+           color = "#0072B5FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.05, size = 3,
+           label = paste0("AUC at 5 years: ", sprintf("%.3f", time_roc_res2$AUC[[3]]), " (", sprintf("%.3f", conf.test[3,1]), " - ", 
+                          sprintf("%.3f", conf.test[3,2]), ")"),
+           color = "#E18727FF"
+  ) +
+  labs(x = "False positive rate", y = "True positive rate", title = "B") +
+  theme(
+    axis.text = element_text(face = "bold", size = 8, color = "black"),
+    axis.title.x = element_text(face = "bold", size = 10, color = "black", margin = margin(c(5, 0, 0, 0))),
+    axis.title.y = element_text(face = "bold", size = 10, color = "black", margin = margin(c(0, 5, 0, 0))),
+    plot.title = element_text(face = "bold", size = 11, color = "black", )
+  )
+groc.test
+```
+
+
+#### kidney trans
+```{r}
+# model training
+model <- coxph(Surv(time, kidney.trans) ~ Subphenotype + Gender + Age + BMI + Smoking + Drinking + Disease.awareness, data = traindata)
+summary(model)
+```
+
+
+```{r}
+# tiff("2. kidney_forest.tiff", width = 6, height = 5, units = "in", res = 300)
+gforest.test <- ggforest(model, data = traindata, fontsize = 0.6, main = "")
+gforest.test
+# dev.off()
+```
+
+
+```{r}
+result.model.2 <- summary(model)
+
+hr.mean <- round(result.model.2$conf.int[,1], 3)
+hr.low <- round(result.model.2$conf.int[,3], 3)
+hr.high <- round(result.model.2$conf.int[,4], 3)
+
+table.text.kt <- data.frame("Predictors" = c("Subphenotype", "Gender", "Age", "BMI", "Smoking", "Drinking",
+                                                "Patial", "Full", "Unknown"), 
+                               "Levels" = "",
+                               "mean" = hr.mean,
+                               "lower" = hr.low,
+                               "upper" = hr.high,
+                               "Hazard ratio" = paste(hr.mean, "(", hr.low, "-", hr.high, ")"),
+                               "p value" = round(result.model.2$coefficients[,5], 3),
+                               "forest" = "")
+
+```
+
+
+```{r}
+library(cowplot)
+
+prow <- plot_grid(gforest.train, gforest.test, ncol = 1,
+          labels = c("A", "B"), label_size = 12, label_x = 0.02)
+          # label_x = c(0.43, 0.43, 0.41, 0.39),
+          # label_y = 1.01, align = "hv")
+
+plot_grid(prow, ncol = 1, rel_heights  = c(1, .05))
+ggsave('4.4. forest.tiff', units = "in", width = 7, height = 8, dpi = 300, compression = 'lzw')
+```
+
+
+```{r}
+# risk score
+pred <- predict(model, newdata = testdata, type = "risk")
+
+# C-Index
+c_index <- survConcordance(Surv(testdata$time, testdata$kidney.trans) ~ pred)
+c_index$concordance
+c_index$std.err
+```
+
+
+##### coefs and confints
+##### ORs and confints
+
+##### ROC
+```{r}
+traindata$pred.kidney.tr <- predict(model, traindata, se.fit = FALSE)
+testdata$pred.kidney.te <- predict(model, testdata, se.fit = FALSE)
+
+time_roc_res.kidney <- timeROC(
+  T = traindata$time,
+  delta = traindata$肾移植,
+  marker = traindata$pred.kidney.tr,
+  cause = 1,
+  weighting="marginal",
+  times = c(1, 3, 5),
+  ROC = TRUE,
+  iid = TRUE
+)
+
+time_roc_res.kidney$AUC
+```
+
+
+```{r}
+conf.train <- confint(time_roc_res.kidney, level = 0.95)$CI_AUC/100
+conf.train
+```
+
+
+```{r}
+time_ROC_df.kidney <- data.frame(
+  TP_3year = time_roc_res.kidney$TP[, 1],
+  FP_3year = time_roc_res.kidney$FP[, 1],
+  TP_5year = time_roc_res.kidney$TP[, 2],
+  FP_5year = time_roc_res.kidney$FP[, 2],
+  TP_10year = time_roc_res.kidney$TP[, 3],
+  FP_10year = time_roc_res.kidney$FP[, 3]
+)
+
+groc.train.kidney <- ggplot(data = time_ROC_df.kidney) +
+  geom_smooth(aes(x = FP_3year, y = TP_3year), size = 1, color = "#BC3C29FF") +
+  geom_smooth(aes(x = FP_5year, y = TP_5year), size = 1, color = "#0072B5FF") +
+  geom_smooth(aes(x = FP_10year, y = TP_10year), size = 1, color = "#E18727FF") +
+  geom_abline(slope = 1, intercept = 0, color = "grey", size = 1, linetype = 2) +
+  theme_bw() +
+  annotate("text",
+           x = 0.65, y = 0.25, size = 3,
+           label = paste0("AUC at 1 years = ", sprintf("%.3f", time_roc_res.kidney$AUC[[1]]), " (", sprintf("%.3f", conf.train[1,1]), " - ", 
+                          sprintf("%.3f", conf.train[1,2]), ")"),
+           color = "#BC3C29FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.15, size = 3,
+           label = paste0("AUC at 3 years = ", sprintf("%.3f", time_roc_res.kidney$AUC[[2]]), " (", sprintf("%.3f", conf.train[2,1]), " - ", 
+                          sprintf("%.3f", conf.train[2,2]), ")"),
+           color = "#0072B5FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.05, size = 3,
+           label = paste0("AUC at 5 years = ", sprintf("%.3f", time_roc_res.kidney$AUC[[3]]), " (", sprintf("%.3f", conf.train[3,1]), " - ", 
+                          sprintf("%.3f", conf.train[3,2]), ")"),
+           color = "#E18727FF"
+  ) +
+  labs(x = "False positive rate", y = "True positive rate", title = "C") +
+  theme(
+    axis.text = element_text(face = "bold", size = 8, color = "black"),
+    axis.title.x = element_text(face = "bold", size = 10, color = "black", margin = margin(c(5, 0, 0, 0))),
+    axis.title.y = element_text(face = "bold", size = 10, color = "black", margin = margin(c(0, 5, 0, 0))),
+    plot.title = element_text(face = "bold", size = 11, color = "black", )
+  )
+groc.train.kidney
+```
+
+
+```{r}
+time_roc_res2.kidney <- timeROC(
+  T = testdata$time,
+  delta = testdata$肾移植,
+  marker = testdata$pred.kidney.te,
+  cause = 1,
+  weighting="marginal",
+  times = c(1, 3, 5),
+  ROC = TRUE,
+  iid = TRUE
+)
+time_roc_res2.kidney$AUC
+```
+
+
+```{r}
+conf.test <- confint(time_roc_res2.kidney, level = 0.95)$CI_AUC/100
+conf.test
+```
+
+
+```{r}
+time_ROC_df2.kidney <- data.frame(
+  TP_3year = time_roc_res2.kidney$TP[, 1],
+  FP_3year = time_roc_res2.kidney$FP[, 1],
+  TP_5year = time_roc_res2.kidney$TP[, 2],
+  FP_5year = time_roc_res2.kidney$FP[, 2],
+  TP_10year = time_roc_res2.kidney$TP[, 3],
+  FP_10year = time_roc_res2.kidney$FP[, 3]
+)
+
+groc.test.kidney <- ggplot(data = time_ROC_df2.kidney) +
+  geom_smooth(aes(x = FP_3year, y = TP_3year), size = 1, color = "#BC3C29FF") +
+  geom_smooth(aes(x = FP_5year, y = TP_5year), size = 1, color = "#0072B5FF") +
+  geom_smooth(aes(x = FP_10year, y = TP_10year), size = 1, color = "#E18727FF") +
+  geom_abline(slope = 1, intercept = 0, color = "grey", size = 1, linetype = 2) +
+  theme_bw() +
+  annotate("text",
+           x = 0.65, y = 0.25, size = 3,
+           label = paste0("AUC at 1 years = ", sprintf("%.3f", time_roc_res2.kidney$AUC[[1]]), " (", sprintf("%.3f", conf.test[1,1]), " - ", 
+                          sprintf("%.3f", conf.test[1,2]), ")"),
+           color = "#BC3C29FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.15, size = 3,
+           label = paste0("AUC at 3 years = ", sprintf("%.3f", time_roc_res2.kidney$AUC[[2]]), " (", sprintf("%.3f", conf.test[2,1]), " - ", 
+                          sprintf("%.3f", conf.test[2,2]), ")"),
+           color = "#0072B5FF"
+  ) +
+  annotate("text",
+           x = 0.65, y = 0.05, size = 3,
+           label = paste0("AUC at 5 years: ", sprintf("%.3f", time_roc_res2.kidney$AUC[[3]]), " (", sprintf("%.3f", conf.test[3,1]), " - ", 
+                          sprintf("%.3f", conf.test[3,2]), ")"),
+           color = "#E18727FF"
+  ) +
+  labs(x = "False positive rate", y = "True positive rate", title = "D") +
+  theme(
+    axis.text = element_text(face = "bold", size = 8, color = "black"),
+    axis.title.x = element_text(face = "bold", size = 10, color = "black", margin = margin(c(5, 0, 0, 0))),
+    axis.title.y = element_text(face = "bold", size = 10, color = "black", margin = margin(c(0, 5, 0, 0))),
+    plot.title = element_text(face = "bold", size = 11, color = "black", )
+  )
+groc.test.kidney
+```
+
+
+```{r}
+prow <- plot_grid(groc.train, groc.test, groc.train.kidney, groc.test.kidney, ncol = 2)
+          # labels = c("CRC", "Lung", "Breast", "Prostate"),
+          # label_x = c(0.43, 0.43, 0.41, 0.39),
+          # label_y = 1.01, align = "hv")
+
+plot_grid(prow, ncol = 1, rel_heights  = c(1, .05))
+ggsave('4.5. roc.tiff', units = "in", width = 8, height = 7, dpi = 300, compression = 'lzw')
+```
+
+

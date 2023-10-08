@@ -1,0 +1,243 @@
+---
+title: "和弦图"
+output: html_document
+---
+
+## load libraries
+```{r, warning=FALSE, message=FALSE}
+library(circlize)
+library(showtext)
+```
+
+## dev
+```{r}
+data <- read.csv("tr_subtype_combined_data.csv", na.strings=c("",NA))
+
+data[data$CLUSTER == 4, 'CLUSTER']  <- 'S1'
+data[data$CLUSTER == 6, 'CLUSTER']  <- 'S2'
+```
+
+```{r}
+data$subtype <- data$CLUSTER
+e_list <- c('高血压','贫血','糖尿病','甲状旁腺功能亢进','骨矿物质代谢异常','心力衰竭',
+            '冠心病','胃肠道疾病','睡眠障碍','高脂血症','水电解质平衡失调')
+abbre_list <- c('HBP','AN','DB','HPT','MBD','HF',
+                'CAD','GD','SD','HL','EI')
+
+df_chord = data.frame()
+for (i in c(1:length(e_list))){
+  e = e_list[i]
+  abbre = abbre_list[i]
+  temp_df = data.frame(from = data[data[e]==1, 'subtype'], to = abbre)
+  df_chord = rbind(df_chord, temp_df)
+}
+
+# normal
+data_e_list <- data[e_list]
+data_e_list <- data.frame(sapply(data_e_list, function(x) as.numeric(as.character(x))))
+data_e_list$rowSums <- rowSums(data_e_list)
+data_e_list$subtype <- data$CLUSTER
+data_e_list_0 <- data_e_list[which(data_e_list$rowSums == 0),]
+df_chord_n = data.frame(from = data_e_list_0$subtype, to = 'N')
+df_chord_1 = rbind(df_chord, df_chord_n)
+
+
+data$subtype <- data$CLUSTER
+e_list <- c('血常规异常','肝功能异常','肾功能异常','脂异常',
+            '电解质异常','血糖异常','血气分析异常','甲状腺功能异常',
+            '超敏c反应蛋白异常','血栓指标异常','凝血功能异常',
+            '心血管指标异常','肿瘤标志物异常','贫血指标异常')
+abbre_list <- c('CBC','LF','RF','DL',
+                'EIM','GLU','ABG','TF',
+                'CRP','CM','CF','CVM','TM','AM')
+
+df_chord = data.frame()
+for (i in c(1:length(e_list))){
+  e = e_list[i]
+  abbre = abbre_list[i]
+  temp_df = data.frame(from = data[data[e]==1, 'subtype'], to = abbre)
+  df_chord = rbind(df_chord, temp_df)
+}
+
+# normal
+data_e_list <- data[e_list]
+data_e_list <- data.frame(sapply(data_e_list, function(x) as.numeric(as.character(x))))
+data_e_list$rowSums <- rowSums(data_e_list)
+data_e_list$subtype <- data$CLUSTER
+data_e_list_0 <- data_e_list[which(data_e_list$rowSums == 0),]
+df_chord_n = data.frame(from = data_e_list_0$subtype, to = 'N')
+df_chord_2 = rbind(df_chord, df_chord_n)
+```
+
+## val
+```{r}
+data <- read.csv("test_subtype_combined_data.csv", na.strings=c("",NA))
+
+data[data$CLUSTER == 4, 'CLUSTER']  <- 'S1'
+data[data$CLUSTER == 6, 'CLUSTER']  <- 'S2'
+```
+
+```{r}
+data$subtype <- data$CLUSTER
+e_list <- c('高血压','贫血','糖尿病','甲状旁腺功能亢进','骨矿物质代谢异常','心力衰竭',
+            '冠心病','胃肠道疾病','睡眠障碍','高脂血症','水电解质平衡失调')
+abbre_list <- c('HBP','AN','DB','HPT','MBD','HF',
+                'CAD','GD','SD','HL','EI')
+
+df_chord = data.frame()
+for (i in c(1:length(e_list))){
+  e = e_list[i]
+  abbre = abbre_list[i]
+  temp_df = data.frame(from = data[data[e]==1, 'subtype'], to = abbre)
+  df_chord = rbind(df_chord, temp_df)
+}
+
+# normal
+data_e_list <- data[e_list]
+data_e_list <- data.frame(sapply(data_e_list, function(x) as.numeric(as.character(x))))
+data_e_list$rowSums <- rowSums(data_e_list)
+data_e_list$subtype <- data$CLUSTER
+data_e_list_0 <- data_e_list[which(data_e_list$rowSums == 0),]
+df_chord_n = data.frame(from = data_e_list_0$subtype, to = 'N')
+df_chord_3 = rbind(df_chord, df_chord_n)
+
+
+data$subtype <- data$CLUSTER
+e_list <- c('血常规异常','肝功能异常','肾功能异常','脂异常',
+            '电解质异常','血糖异常','血气分析异常','甲状腺功能异常',
+            '超敏c反应蛋白异常','凝血功能异常',
+            '心血管指标异常','贫血指标异常')
+abbre_list <- c('CBC','LF','RF','DL',
+                'EIM','GLU','ABG','TF',
+                'CRP','CF','CVM','AM')
+
+df_chord = data.frame()
+for (i in c(1:length(e_list))){
+  e = e_list[i]
+  abbre = abbre_list[i]
+  temp_df = data.frame(from = data[data[e]==1, 'subtype'], to = abbre)
+  df_chord = rbind(df_chord, temp_df)
+}
+
+# normal
+data_e_list <- data[e_list]
+data_e_list <- data.frame(sapply(data_e_list, function(x) as.numeric(as.character(x))))
+data_e_list$rowSums <- rowSums(data_e_list)
+data_e_list$subtype <- data$CLUSTER
+data_e_list_0 <- data_e_list[which(data_e_list$rowSums == 0),]
+df_chord_n = data.frame(from = data_e_list_0$subtype, to = 'N')
+df_chord_4 = rbind(df_chord, df_chord_n)
+```
+
+
+## TIFF
+```{r}
+# 创建TIFF文件设备
+tiff("chord_diagrams.tiff", width = 17, height = 17, units = "in", res = 300)
+
+# 设置绘图参数
+par(mfrow = c(2, 2))
+
+
+orders = c('S1', 'S2', 
+           'HBP','AN','DB','HPT','MBD','HF',
+           'CAD','GD','SD','HL','EI', 'N')
+grid.col = c('S1'='#F9C77E', 'S2'='#CE4257',
+             'HBP'='#DCDCDC', 'AN'='#DCDCDC',
+             'DB'='#DCDCDC', 'HPT'='#DCDCDC', 
+             'MBD'='#DCDCDC', 'HF'='#DCDCDC',
+             'CAD'='#DCDCDC', 'GD'='#DCDCDC',
+             'SD'='#DCDCDC', 'HL'='#DCDCDC',
+             'EI'='#DCDCDC', 'N'='#DCDCDC')
+
+circos.par()
+chordDiagram(df_chord_1, order = orders, grid.col=grid.col, scale=FALSE, 
+             annotationTrack = 'grid')
+circos.track(track.index = 1, panel.fun = function(x, y) {
+  circos.text(CELL_META$xcenter, CELL_META$ylim[1]+1, CELL_META$sector.index, 
+              facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5), cex = 1.2)
+}, bg.border = NA) 
+circos.clear()
+usr <- par("usr")
+text(x = usr[1], y = usr[4], labels = "A", adj = c(0, 1), font = 2, cex = 2)
+
+
+orders = c('S1', 'S2', 
+           'CBC','LF','RF','DL',
+           'EIM','GLU','ABG','TF',
+           'CRP','CM','CF','CVM','TM','AM',
+           'N')
+grid.col = c('S1'='#F9C77E', 'S2'='#CE4257', 
+             'CBC'='#DCDCDC', 'LF'='#DCDCDC',
+             'RF'='#DCDCDC', 'DL'='#DCDCDC', 
+             'EIM'='#DCDCDC', 'GLU'='#DCDCDC',
+             'ABG'='#DCDCDC', 'TF'='#DCDCDC',
+             'CRP'='#DCDCDC', 'CM'='#DCDCDC',
+             'CF'='#DCDCDC', 'CVM'='#DCDCDC', 
+             'TM'='#DCDCDC', 'AM'='#DCDCDC',
+             'N'='#DCDCDC')
+
+circos.par()
+chordDiagram(df_chord_2, order = orders, grid.col=grid.col, scale=FALSE, 
+             annotationTrack = 'grid')
+circos.track(track.index = 1, panel.fun = function(x, y) {
+  circos.text(CELL_META$xcenter, CELL_META$ylim[1]+1, CELL_META$sector.index, 
+              facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5), cex = 1.2)
+}, bg.border = NA) 
+circos.clear()
+usr <- par("usr")
+text(x = usr[1], y = usr[4], labels = "B", adj = c(0, 1), font = 2, cex = 2)
+
+
+orders = c('S1', 'S2', 
+           'HBP','AN','DB','HPT','MBD','HF',
+           'CAD','GD','SD','HL','EI', 'N')
+grid.col = c('S1'='#F9C77E', 'S2'='#CE4257',
+             'HBP'='#DCDCDC', 'AN'='#DCDCDC',
+             'DB'='#DCDCDC', 'HPT'='#DCDCDC', 
+             'MBD'='#DCDCDC', 'HF'='#DCDCDC',
+             'CAD'='#DCDCDC', 'GD'='#DCDCDC',
+             'SD'='#DCDCDC', 'HL'='#DCDCDC',
+             'EI'='#DCDCDC', 'N'='#DCDCDC')
+
+circos.par()
+chordDiagram(df_chord_3, order = orders, grid.col=grid.col, scale=FALSE, 
+             annotationTrack = 'grid')
+circos.track(track.index = 1, panel.fun = function(x, y) {
+  circos.text(CELL_META$xcenter, CELL_META$ylim[1]+1, CELL_META$sector.index, 
+              facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5), cex = 1.2)
+}, bg.border = NA) 
+circos.clear()
+usr <- par("usr")
+text(x = usr[1], y = usr[4], labels = "C", adj = c(0, 1), font = 2, cex = 2)
+
+
+orders = c('S1', 'S2', 
+           'CBC','LF','RF','DL',
+           'EIM','GLU','ABG','TF',
+           'CRP','CF','CVM','AM',
+           'N')
+grid.col = c('S1'='#F9C77E', 'S2'='#CE4257', 
+             'CBC'='#DCDCDC', 'LF'='#DCDCDC',
+             'RF'='#DCDCDC', 'DL'='#DCDCDC', 
+             'EIM'='#DCDCDC', 'GLU'='#DCDCDC',
+             'ABG'='#DCDCDC', 'TF'='#DCDCDC',
+             'CRP'='#DCDCDC', 
+             'CF'='#DCDCDC', 'CVM'='#DCDCDC', 
+             'AM'='#DCDCDC',
+             'N'='#DCDCDC')
+
+circos.par()
+chordDiagram(df_chord_4, order = orders, grid.col=grid.col, scale=FALSE, 
+             annotationTrack = 'grid')
+circos.track(track.index = 1, panel.fun = function(x, y) {
+  circos.text(CELL_META$xcenter, CELL_META$ylim[1]+1, CELL_META$sector.index, 
+              facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5), cex = 1.2)
+}, bg.border = NA) 
+circos.clear()
+usr <- par("usr")
+text(x = usr[1], y = usr[4], labels = "D", adj = c(0, 1), font = 2, cex = 2)
+
+# 关闭TIFF
+dev.off()
+```

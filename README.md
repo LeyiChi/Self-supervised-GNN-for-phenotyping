@@ -11,132 +11,84 @@ git clone https://github.com/LeyiChi/Self-supervised-GNN-for-phenotyping.git
 ```
 
 ### Requirement
-1. Keras 2.2.4
-2. tensorflow-gpu 2.0.0
-3. pycox 0.2.1
-4. Some other libraries (find what you miss when running the code)
+1. Python 3.6
+2. torch 1.10.1
+3. pandas 1.1.5
+4. sklearn 0.24.2
+5. R 4.3.1
+6. shap 0.41.0
+7. survival 3.5.5
+Some other libraries (find what you miss when running the code)
 
 
 ### Data availability
 Protected Health Information restrictions apply to the availability of the clinical data here, which were used under IRB approval for use only in the current study. As a result, this dataset is not publicly available.
 
-### Data extraction and cleaning
+### Data preparation
+1. Data extraction are done using sql from the electronic health record system. The codes are not provided as the dataset is not publicly available.
+2. Run 1-data preprocess.py for data preprocessing to screen included patients and visits.
 
-
-
-
-### Data Preparation
-1. Extract data from the downloaded SEER data using sql. The data extraction processes were as follows:
-- **CRC data** <br/>
-![image](./images/data-extract-crc.png)
-- **Lung data** <br/>
-![image](./images/data-extract-lung.png)
-- **Breast data** <br/>
-![image](./images/data-extract-breast.png)
-- **Prostate data** <br/>
-![image](./images/data-extract-prostate.png)
-
-2. put the extracted data into ./data file directory with the file format .R for R and .csv for python.
-3. run python 000-data_process.py to transform categorical variables to one-hot encoded variables.
-
-### training and evaluation for survival analysis with CRs
-Go to the survival-analysis-with-CRs directory using 
+### Subphenotype derivation using self-supervised graph neural network
+1. Get initial embeddings for nodes
 ```
-cd survival-analysis-with-CRs/
+python 2-initial embeddings for nodes.py
 ```
-
-1. Fine-Gray model:
+2. Visit hierarchy network construction
 ```
-Rscript ./001-model-fg.R
+python 3-Visit hierarchy network.py
 ```
-2. Random survival forest:
+3. Autoencoder pretraining
 ```
-Rscript ./002-rsf.R
+python 4.1-autoencoder-pretraining.py
 ```
-3. Simple MLP model:
+4. The self-supervised graph clustering model training
 ```
-python 003-simpleMLP.py
+python 4.2-Self supervised GNN model training.py
 ```
-4. DeepHit model:
+5. Model validation on the testing data and patient nodes visualization
 ```
-python 004-deephit.py
-```
-5. SSMTL model:
-```
-python 005-ssmtl.py
-```
-6. model performance compare:
-```
-Rscript ./006-model-compare.R
-```
-7. variable importance for SSMTL:
-```
-python 007-ssmtl-vimp.py
-Rscript ./008-vimp.R
-```
-8. nonlinear effects:
-```
-python 009-ssmtlr-nonlinear.py
-Rscript ./010-nonlinear-plot.R
+python 5-Validation and visualization.py
 ```
 
-### training and evaluation for survival analysis without CRs
-Go to the survival-analysis-without-CRs directory using 
+### Subphenotype analysis
+1. data preparing for subphenotype analysis
 ```
-cd survival-analysis-without-CRs/
+python 6.1-data preparing for subphenotype analysis.py
 ```
-
-1. Cox model:
+2. data cleaning 
 ```
-Rscript ./001-cox.R
+python 6.2-data cleaning.py
 ```
-2. AFT model:
+3. data distribution and statistics
 ```
-Rscript ./002-aft.R
+python 6.3-data distribution and statistics.py
 ```
-3. Random survival forest:
+KM curves and chord diagram are in R scripts.
 ```
-Rscript ./003-rsf.R
+7.1-km_curve.Rmd
+7.2-chord_diagram.Rmd
 ```
-4. GBM model:
+4. LDA model for disease status generation
 ```
-Rscript ./004-gbm.R
+python 6.4 LDA model for disease status generation.py
 ```
-5. DeepSurv model:
+5. To get insights into the disease status and visit behaviors, run
 ```
-python 005-deepsurv.py
+python 6.5-visit-stats-1.py
+python 6.6-visit-stats-2.py
+python 6.7-visit-stats-3.py
 ```
-6. DeepHit model:
+6. Subphenotype prediction model construction and evaluation
 ```
-python 006-DeepHit.py
+python 6.8-subphenotype prediction model.py
 ```
-7. MTLR model:
+7. Prognosis prediction model
+The prognosis prediction model was built using Cox regression. Model construction and evaluation were implemented in the following script.
 ```
-python 007-MTLR.py
+8-cox_regression.Rmd
 ```
-8. Logistic Hazard model
+8. Important interventions discovery
 ```
-python 008-logistichazard.py
+9-psm-train.Rmd
 ```
-9. PMF model:
-```
-python 009-PMF.py
-```
-10. SSMTL model:
-```
-python 010-ssmtl.py
-```
-11. model performance compare:
-```
-Rscript ./011-model-compare.R
-```
-12. variable importance for SSMTL:
-```
-python 012-ssmtl-vimp.py
-Rscript ./013-vimp.R
-```
-
-### results of effects of Prognostic Factors on the Survival Risk were under ./results.
-
-
 
