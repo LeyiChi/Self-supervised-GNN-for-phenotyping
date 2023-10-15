@@ -541,15 +541,6 @@ for i in range(3):
     res_all = pd.concat([res_all, res])
 
 
-# In[46]:
-
-
-# res_all['内部频率1'] = res_all['内部频率1'].apply(lambda x: '{:.2f}%'.format(x * 100))
-# res_all['整体频率1'] = res_all['整体频率1'].apply(lambda x: '{:.2f}%'.format(x * 100))
-# res_all['内部频率2'] = res_all['内部频率2'].apply(lambda x: '{:.2f}%'.format(x * 100))
-# res_all['整体频率2'] = res_all['整体频率2'].apply(lambda x: '{:.2f}%'.format(x * 100))
-# res_all
-
 
 # In[47]:
 

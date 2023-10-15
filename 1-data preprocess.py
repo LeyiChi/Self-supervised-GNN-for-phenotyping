@@ -113,14 +113,5 @@ print('event: ', len(set(df_3['EVENT'])))
 #df.to_csv("data/data_0428.csv")
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
 
 

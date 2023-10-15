@@ -21,7 +21,7 @@ from tableone import TableOne
 # In[3]:
 
 
-df_data_logs = pd.read_csv("zheyi_data_logs.csv")
+df_data_logs = pd.read_csv("tr_data_logs.csv")
 df_data_logs = df_data_logs.drop(df_data_logs.columns[0], axis=1)
 df_data_logs.head()
 

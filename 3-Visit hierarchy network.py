@@ -168,13 +168,6 @@ for ind in df_visit_event.index:
 
 
 
-
-# In[ ]:
-
-
-
-
-
 # ### node embeddings
 
 # In[100]:
@@ -300,13 +293,5 @@ with open('model_'+version+'/layered_graph_hetero.pkl', "wb") as f:
 
 
 # In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
 
 

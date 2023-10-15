@@ -395,14 +395,6 @@ plt.show()
 
 
 
-
-
-# In[ ]:
-
-
-
-
-
 # #### visit embeddings
 
 # In[30]:
@@ -459,13 +451,6 @@ plt.show()
 
 
 # In[ ]:
-
-
-
-
-
-# In[ ]:
-
 
 
 
@@ -566,19 +551,6 @@ with open ('data/pid_cluster_lstm.csv','w',encoding='utf-8',newline='') as f:
 
 
 # In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
 
 
 

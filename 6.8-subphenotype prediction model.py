@@ -114,9 +114,9 @@ df['CLUSTER'] = df['CLUSTER'].map({1: 0, 2: 1})
 # In[14]:
 
 
-from sklearn.model_selection import train_test_split
-
-df_train, df_test = train_test_split(df, test_size = 0.3, random_state = 0, stratify = df['CLUSTER'].values)
+# df_train, df_test = train_test_split(df, test_size = 0.3, random_state = 0, stratify = df['CLUSTER'].values)
+df_train = df[df['PERSON_ID'].isin(train_test_pid['train_pid']), :]
+df_test = df[df['PERSON_ID'].isin(train_test_pid['test_pid']), :]
 
 
 # ### subphenotype prediction model

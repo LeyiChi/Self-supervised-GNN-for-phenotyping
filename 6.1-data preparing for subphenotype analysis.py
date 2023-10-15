@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore')
 import numpy as np
 import pandas as pd
 from tableone import TableOne
-
+import pickle
 
 # ### events
 
@@ -69,13 +69,7 @@ df_tr[['EVENT','TYPE']].drop_duplicates()['TYPE'].value_counts()/296
 
 df_pivot_tr = df_tr.groupby(['EVENT', 'TYPE']).agg({'VISIT_OCCURRENCE_ID':'count'}).reset_index()
 df_pivot_tr = df_pivot_tr.rename(columns = {'VISIT_OCCURRENCE_ID':'CNT'})
-df_pivot_tr
 
-
-# In[12]:
-
-
-df_pivot_tr[df_pivot_tr['CNT']>10000].sort_values(by='CNT', ascending=False)
 
 
 # In[13]:
@@ -429,99 +423,47 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-# In[109]:
-
-
-sns.set(style='whitegrid', font_scale=1)
-fig, ax = plt.subplots(2, 3, constrained_layout=True, figsize=(12, 6), dpi=300)
-
-# development cohort
-sns_plot = sns.distplot(x=df_visit_stat_tr['CNT'], ax=ax[0,0])
-sns_plot.set_title('A. tr distribution of visit numbers per patient', fontweight='bold')
-sns_plot.set_xlabel("Number of visits per patient", fontweight='bold')
-sns_plot.set_ylabel("Density", fontweight='bold')
-ax[0,0].axvline(np.median(df_visit_stat_tr['CNT']), c='r', ls='--')
-
-sns_plot = sns.distplot(x=df_event_stat_tr['CNT'], ax=ax[0,1])
-sns_plot.set_title('B. tr distribution of event numbers per visit', fontweight='bold')
-sns_plot.set_xlabel("Number of events per visit", fontweight='bold')
-sns_plot.set_ylabel("Density", fontweight='bold')
-ax[0,1].axvline(np.median(df_event_stat_tr['CNT']), c='r', ls='--')
-
-sns_plot = sns.distplot(x=df_pivot_tr['CNT'], bins=50, ax=ax[0,2])
-sns_plot.set_title('C. tr distribution of event occurrences', fontweight='bold')
-sns_plot.set_xlabel("Number of event occurrences", fontweight='bold')
-sns_plot.set_ylabel("Density", fontweight='bold')
-ax[0,2].axvline(np.median(df_pivot_tr['CNT']), c='r', ls='--')
-
-# validation cohort
-sns_plot = sns.distplot(x=df_visit_stat_test['CNT'], ax=ax[1,0])
-sns_plot.set_title('D. test distribution of visit numbers per patient', fontweight='bold')
-sns_plot.set_xlabel("Number of visits per patient", fontweight='bold')
-sns_plot.set_ylabel("Density", fontweight='bold')
-ax[1,0].axvline(np.median(df_visit_stat_test['CNT']), c='r', ls='--')
-
-sns_plot = sns.distplot(x=df_event_stat_test['CNT'], ax=ax[1,1])
-sns_plot.set_title('E. test distribution of event numbers per visit', fontweight='bold')
-sns_plot.set_xlabel("Number of events per visit", fontweight='bold')
-sns_plot.set_ylabel("Density", fontweight='bold')
-ax[1,1].axvline(np.median(df_event_stat_test['CNT']), c='r', ls='--')
-
-sns_plot = sns.distplot(x=df_pivot_test['CNT'], bins=50, ax=ax[1,2])
-sns_plot.set_title('F. test distribution of event occurrences', fontweight='bold')
-sns_plot.set_xlabel("Number of event occurrences", fontweight='bold')
-sns_plot.set_ylabel("Density", fontweight='bold')
-ax[1,2].axvline(np.median(df_pivot_test['CNT']), c='r', ls='--')
-
-
-# In[ ]:
-
-
-# fig = sns_plot.get_figure()
-# fig.savefig('./data_statistics.tiff')
-# fig.savefig('./data_statistics.png')
-
 
 # In[111]:
 
 
 sns.set(style='whitegrid', font_scale=1)
-fig, ax = plt.subplots(2, 3, constrained_layout=True, figsize=(12,6), dpi=150)
+fig, ax = plt.subplots(2, 3, constrained_layout=True, figsize=(12,6), dpi=300)
 
 # development cohort
 sns_plot = sns.distplot(x=df_visit_stat_tr['CNT'], ax=ax[0,0])
-sns_plot.set_title('A', fontweight='bold', loc='left')
+sns_plot.set_title('a', fontweight='bold', loc='left')
 sns_plot.set_xlabel("Number of visits per patient", fontweight='bold')
 sns_plot.set_ylabel("Density", fontweight='bold')
 ax[0,0].axvline(np.median(df_visit_stat_tr['CNT']), c='r', ls='--')
 
 sns_plot = sns.distplot(x=df_event_stat_tr['CNT'], ax=ax[0,1])
-sns_plot.set_title('B', fontweight='bold', loc='left')
+sns_plot.set_title('b', fontweight='bold', loc='left')
 sns_plot.set_xlabel("Number of events per visit", fontweight='bold')
 sns_plot.set_ylabel("Density", fontweight='bold')
 ax[0,1].axvline(np.median(df_event_stat_tr['CNT']), c='r', ls='--')
 
 sns_plot = sns.distplot(x=df_pivot_tr['CNT'], bins=50, ax=ax[0,2])
-sns_plot.set_title('C', fontweight='bold', loc='left')
+sns_plot.set_title('c', fontweight='bold', loc='left')
 sns_plot.set_xlabel("Number of event occurrences", fontweight='bold')
 sns_plot.set_ylabel("Density", fontweight='bold')
 ax[0,2].axvline(np.median(df_pivot_tr['CNT']), c='r', ls='--')
 
 # validation cohort
 sns_plot = sns.distplot(x=df_visit_stat_test['CNT'], ax=ax[1,0])
-sns_plot.set_title('D', fontweight='bold', loc='left')
+sns_plot.set_title('d', fontweight='bold', loc='left')
 sns_plot.set_xlabel("Number of visits per patient", fontweight='bold')
 sns_plot.set_ylabel("Density", fontweight='bold')
 ax[1,0].axvline(np.median(df_visit_stat_test['CNT']), c='r', ls='--')
 
 sns_plot = sns.distplot(x=df_event_stat_test['CNT'], ax=ax[1,1])
-sns_plot.set_title('E', fontweight='bold', loc='left')
+sns_plot.set_title('e', fontweight='bold', loc='left')
 sns_plot.set_xlabel("Number of events per visit", fontweight='bold')
 sns_plot.set_ylabel("Density", fontweight='bold')
 ax[1,1].axvline(np.median(df_event_stat_test['CNT']), c='r', ls='--')
 
 sns_plot = sns.distplot(x=df_pivot_test['CNT'], bins=50, ax=ax[1,2])
-sns_plot.set_title('F', fontweight='bold', loc='left')
+sns_plot.set_title('f', fontweight='bold', loc='left')
 sns_plot.set_xlabel("Number of event occurrences", fontweight='bold')
 sns_plot.set_ylabel("Density", fontweight='bold')
 ax[1,2].axvline(np.median(df_pivot_test['CNT']), c='r', ls='--')
@@ -532,7 +474,6 @@ ax[1,2].axvline(np.median(df_pivot_test['CNT']), c='r', ls='--')
 
 fig = sns_plot.get_figure()
 fig.savefig('./data_statistics.tiff')
-# fig.savefig('./data_statistics.png')
 
 
 # In[ ]:

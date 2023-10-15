@@ -141,13 +141,6 @@ for ind in df_visit_event.index:
 
 
 
-
-# In[ ]:
-
-
-
-
-
 # ### node embeddings
 
 # In[14]:
@@ -517,13 +510,6 @@ with open("model_0919/pred.pkl", "rb") as tf:
 
 
 
-
-# In[ ]:
-
-
-
-
-
 # ### Visualization
 
 # In[40]:
@@ -735,13 +721,5 @@ plt.show()
 
 
 # In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
 
 
