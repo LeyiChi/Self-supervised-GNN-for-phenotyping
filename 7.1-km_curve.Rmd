@@ -1,0 +1,236 @@
+---
+title: "Subphenotype analysis"
+output: html_document
+---
+
+## load libraries
+```{r, message=FALSE, warning=FALSE}
+x <- c("MASS","stats","survival","survminer","mice","dplyr","tidyr",
+       "ggplot2","circlize","RColorBrewer","showtext",
+       "tableone")
+y <- lapply(x, library, character.only = TRUE)
+rm(x, y)
+```
+
+## load data
+```{r}
+data <- read.csv("zheyi_subtype_combined_data.csv", na.strings=c("",NA))
+```
+
+## data cleaning
+### continuous var
+```{r}
+data$height <- as.numeric(data$height)
+data$weight <- as.numeric(data$weight)
+
+data$BMI <- data$weight/data$height/data$height * 10000
+data[is.infinite(data$BMI), "BMI"] <- NA
+```
+
+### categorical var
+```{r}
+# subohenotype
+data[data$CLUSTER == 4, 'CLUSTER']  <- 1
+data[data$CLUSTER == 6, 'CLUSTER']  <- 2
+```
+
+
+```{r}
+# 性别
+levels(factor(data$性别))
+index <- c(0,1)
+values <- c("女", "男")
+data$性别 <- index[match(data$性别, values)]
+data$性别 <- factor(data$性别)
+  
+# 吸烟
+levels(factor(data$吸烟))
+index <- c(1,1,0)
+values <- c("有", "有，已戒", "无")
+data$吸烟 <- index[match(data$吸烟, values)]
+data$吸烟  <- factor(data$吸烟)
+  
+# 饮酒
+levels(factor(data$饮酒))
+index <- c(1,0)
+values <- c("有", "无")
+data$饮酒 <- index[match(data$饮酒, values)]
+data$饮酒  <- factor(data$饮酒)
+  
+# 文化程度
+levels(factor(data$文化程度))
+index <-  c(1,1,2,2,3,3)   
+values <- c("小学毕业", "初中毕业",
+            "高中毕业", "中等技术 学校、职业学校毕业", 
+            "大专或大学毕业", "硕士以上")
+data$文化程度 <- index[match(data$文化程度, values)]
+data$文化程度 <- factor(data$文化程度)
+
+# 对疾病认识
+levels(factor(data$对疾病认识))
+index <- c(0,1,2)
+values <- c("不认识", "部分认识", "完全认识")
+data$对疾病认识 <- index[match(data$对疾病认识, values)]
+data$对疾病认识  <- factor(data$对疾病认识)
+
+# 药物依赖.药瘾.吸毒
+levels(factor(data$药物依赖.药瘾.吸毒))
+index <- c(1,0)
+values <- c("有", "无")
+data$药物依赖.药瘾.吸毒 <- index[match(data$药物依赖.药瘾.吸毒, values)]
+data$药物依赖.药瘾.吸毒  <- factor(data$药物依赖.药瘾.吸毒)
+```
+
+```{r}
+l1 <- c("PERSON_ID", "性别", "首次透析年龄", "身高", "体重", "BMI", 
+        "吸烟", "饮酒", "文化程度", "对疾病认识", "药物依赖.药瘾.吸毒", 
+        "观察窗", "结局事件", "首次指标异常时间") 
+l2 <- setdiff(colnames(data), l1)
+# print(l2)
+
+for (x in l2){
+  data[[x]] <- factor(data[[x]])
+}
+```
+
+```{r}
+contVars <- c("首次透析年龄", "身高", "体重", "BMI", "观察窗", "首次指标异常时间")
+catVars <- c("性别", "吸烟", "饮酒", "文化程度", "对疾病认识", "药物依赖.药瘾.吸毒", "结局事件", l2[-1])
+# print(catVars)
+myVars <- c(contVars, catVars)
+```
+
+```{r}
+data[data$结局事件 == "转出", "结局事件"] <- "维持血透"
+data[data$结局事件 == "急性肾病", "结局事件"] <- "维持血透"
+# data[data$结局事件 == "腹透", "结局事件"] <- "血透失败"
+# data[data$结局事件 == "肾移植", "结局事件"] <- "血透失败"
+```
+
+```{r}
+write.csv(data, "zheyi_subtype_combined_data_R.csv", 
+          row.names = FALSE,
+          fileEncoding = "GB18030")
+```
+
+
+## Survival analysis
+### Outcome events
+```{r}
+CreateTableOne(vars = "status", data = data_s)
+```
+
+
+```{r}
+CreateTableOne(vars = "status", strata = "CLUSTER", data = data_s)
+```
+
+
+```{r}
+train.pid <- read.csv("train_pid.csv")
+test.pid <- read.csv("test_pid.csv")
+
+traindata <- data_s[data_s$PERSON_ID %in% train.pid$PERSON_ID, ]
+testdata <- data_s[data_s$PERSON_ID %in% test.pid$PERSON_ID, ]
+
+```
+
+
+### KM curve
+```{r}
+splots <- list()
+
+# death
+traindata$Subphenotype <- traindata$CLUSTER
+splots[[1]] <- ggsurvplot(survfit(Surv(time/365.25, traindata$status=="death") ~ Subphenotype, data = traindata),
+           data = traindata,
+           pval = TRUE, 
+           conf.int = TRUE,
+           # surv.median.line = "hv",
+           legend = "top",
+           legend.title = "Subphenotype",
+           censor = TRUE,
+           censor.shape = "", 
+           break.x.by = 5,
+           font.tickslab = 12,
+           size = 1,
+           linetype = "strata",
+           ylab = "Survival probability",
+           xlab = "Time (years)",
+           tables.theme = theme_cleantable(), # theme for tables
+           tables.y.text = FALSE, # hide tables y axis text 
+           ggtheme = theme_bw()+ theme(axis.title = element_text(size = 12, face = "bold")))  
+
+# kidney trans
+splots[[3]] <- ggsurvplot(survfit(Surv(time/365.25, traindata$status=="kidney.trans") ~ Subphenotype, data = traindata),
+           data = traindata,
+           pval = TRUE, 
+           conf.int = TRUE,
+           # surv.median.line = "hv", 
+           legend = "top",
+           legend.title = "Subphenotype",
+           censor = TRUE,
+           censor.shape = "", 
+           break.x.by = 5,
+           font.tickslab = 12,
+           size = 1,
+           linetype = "strata",
+           ylab = "Survival without transplantation",
+           xlab = "Time (years)",
+           tables.theme = theme_cleantable(), # theme for tables
+           tables.y.text = FALSE, # hide tables y axis text 
+           ggtheme = theme_bw() + theme(axis.title = element_text(size = 12, face = "bold"))) 
+
+
+# death
+testdata$Subphenotype <- testdata$CLUSTER
+splots[[2]] <- ggsurvplot(survfit(Surv(time/365.25, testdata$status=="death") ~ Subphenotype, data = testdata),
+           data = testdata,
+           pval = TRUE, 
+           conf.int = TRUE,
+           # surv.median.line = "hv",
+           legend = "top",
+           legend.title = "Subphenotype",
+           censor = TRUE,
+           censor.shape = "", 
+           break.x.by = 5,
+           font.tickslab = 12,
+           size = 1,
+           linetype = "strata",
+           ylab = "Survival probability",
+           xlab = "Time (years)",
+           tables.theme = theme_cleantable(), # theme for tables
+           tables.y.text = FALSE, # hide tables y axis text 
+           ggtheme = theme_bw()+ theme(axis.title = element_text(size = 12, face = "bold")))  
+
+# kidney trans
+splots[[4]] <- ggsurvplot(survfit(Surv(time/365.25, testdata$status=="kidney.trans") ~ Subphenotype, data = testdata),
+           data = testdata,
+           pval = TRUE, 
+           conf.int = TRUE,
+           # surv.median.line = "hv", 
+           legend = "top",
+           legend.title = "Subphenotype",
+           censor = TRUE,
+           censor.shape = "", 
+           break.x.by = 5,
+           font.tickslab = 12,
+           size = 1,
+           linetype = "strata",
+           ylab = "Survival without transplantation",
+           xlab = "Time (years)",
+           tables.theme = theme_cleantable(), # theme for tables
+           tables.y.text = FALSE, # hide tables y axis text 
+           ggtheme = theme_bw() + theme(axis.title = element_text(size = 12, face = "bold"))) 
+
+
+# arrange
+splots[[1]]$plot <- splots[[1]]$plot + labs(tag = expression(bold("A")))
+splots[[3]]$plot <- splots[[3]]$plot + labs(tag = expression(bold("B")))
+splots[[2]]$plot <- splots[[2]]$plot + labs(tag = expression(bold("C")))
+splots[[4]]$plot <- splots[[4]]$plot + labs(tag = expression(bold("D")))
+arrange_ggsurvplots(splots, print = TRUE, ncol = 2, nrow = 2) %>%
+  ggsave(device="tiff", filename="2.1 km_2cluster.tiff", width = 10, height = 8)
+```
+
+

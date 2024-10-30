@@ -1,0 +1,497 @@
+---
+title: "Subphenotype analysis"
+output: html_document
+---
+
+## load libraries
+```{r, message=FALSE, warning=FALSE}
+rm(list = ls())
+
+x <- c("tableone", "MASS","stats","survival","survminer","mice","dplyr","tidyr",
+       "ggplot2", "circlize","RColorBrewer","showtext", "timeROC",
+       "survival", "jtools", "MuMIn", "sjPlot", "survivalROC", "cutpointr",
+       "rms", "CBCgrps", "caret", "ROCR", "survminer", "gridExtra", "MatchIt", "gmodels")
+y <- lapply(x, library, character.only = TRUE)
+rm(x, y)
+```
+
+
+## load data
+```{r}
+traindata <- read.csv("cox_train.csv")
+testdata <- read.csv("cox_test.csv")
+```
+
+
+## data cleaning
+```{r}
+traindata[["CLUSTER"]] <- factor(traindata[["CLUSTER"]], labels = c("Subphenotype 1", "Subphenotype 2"))
+testdata[["CLUSTER"]] <- factor(testdata[["CLUSTER"]], labels = c("Subphenotype 1", "Subphenotype 2"))
+traindata[["性别"]] <- factor(traindata[["性别"]], labels = c("Male", "Female"))
+testdata[["性别"]] <- factor(testdata[["性别"]], labels = c("Male", "Female"))
+traindata[["吸烟"]] <- factor(traindata[["吸烟"]], labels = c("No", "Yes"))
+testdata[["吸烟"]] <- factor(testdata[["吸烟"]], labels = c("No", "Yes"))
+traindata[["饮酒"]] <- factor(traindata[["饮酒"]], labels = c("No", "Yes"))
+testdata[["饮酒"]] <- factor(testdata[["饮酒"]], labels = c("No", "Yes"))
+traindata[["对疾病认识"]] <- factor(traindata[["对疾病认识"]], labels = c("No awareness", "Partial awareness", "Complete awareness", "Unknown"))
+testdata[["对疾病认识"]] <- factor(testdata[["对疾病认识"]], labels = c("No awareness", "Partial awareness", "Complete awareness", "Unknown"))
+
+
+catVars <- c("drug.dependent", "status")
+for (x in catVars){
+  traindata[[x]] <- factor(traindata[[x]])
+  testdata[[x]] <- factor(testdata[[x]])
+}
+```
+
+
+```{r}
+# time
+traindata$time <- traindata$time/365.25
+testdata$time <- testdata$time/365.25
+```
+
+
+```{r}
+data <- rbind(traindata, testdata)
+data.tmp <- data[data$time < 100, ]
+t1 <- data.tmp[data.tmp$CLUSTER=="Subphenotype 1", ]
+t2 <- data.tmp[data.tmp$CLUSTER=="Subphenotype 2", ]
+
+ggplot(aes(x=time, fill=CLUSTER), data=data.tmp) +
+  geom_histogram(color="#e9ecef", alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("#377eb8", "#4daf4a"))
+```
+
+
+```{r}
+train.pid <- read.csv("train_pid.csv")
+test.pid <- read.csv("test_pid.csv")
+
+traindata <- data[data$PERSON_ID %in% train.pid$PERSON_ID, ]
+
+data <- traindata
+
+round(sum(data$time < 1 & data$死亡 == 1)/dim(data)[1] * 100, 2)
+round(sum(data$time < 5 & data$死亡 == 1)/dim(data)[1] * 100, 2)
+```
+
+
+```{r}
+data.1 <- data[data$CLUSTER == "Subphenotype 1",]
+data.2 <- data[data$CLUSTER == "Subphenotype 2",]
+```
+
+
+```{r}
+cols <- c('抗贫血药', '磷酸钠盐', '维生素', '甘脯二肽氨基肽酶偏低',
+       '骨矿物质代谢异常', '抗凝血药', '乙肝病毒指标异常', '钙离子通道阻滞剂', 
+       '氨基酸', '脂异常')
+
+print("----------------------------------  全队列统计 ----------------------------------")
+table(data[["冠心病"]], data[["抗血小板药物"]])
+
+print("----------------------------------  分亚型统计 ----------------------------------")
+table(data.1[["冠心病"]], data.1[["抗血小板药物"]])
+table(data.2[["冠心病"]], data.2[["抗血小板药物"]])
+
+print("----------------------------------  分亚型统计-2 ----------------------------------")
+t1 <- table(data$CLUSTER, data[["抗血小板药物"]])
+t2 <- table(data$CLUSTER, data[["冠心病"]])
+t1
+t2
+
+a <- t1[1,2]/(t1[1,2] + t2[1,2])
+b <- t1[2,2]/(t1[2,2] + t2[2,2])
+print(a)
+print(b)
+print(a/b)
+
+
+print("----------------------------------  Ratios: ----------------------------------")
+print(t1[1,2]/t2[1,2])
+print(t1[2,2]/t2[2,2])
+print((t1[1,2]/t2[1,2])/(t1[2,2]/t2[2,2]))
+
+
+print("----------------------------------  Others: ----------------------------------")
+# CrossTable()函数可以直接对原始数据记录进行交叉表创建，以及卡方检验
+CrossTable(data.1[["冠心病"]], data.1[["抗血小板药物"]], chisq = T, fisher = T, mcnemar = T)
+
+CrossTable(data.2[["冠心病"]], data.2[["抗血小板药物"]], chisq = T, fisher = T, mcnemar = T)
+
+
+
+data.gxb <- data
+col <- "抗血小板药物"
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- all data： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ 抗血小板药物, data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ 抗血小板药物, data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data["冠心病"]==1, ]
+col <- "抗血小板药物"
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- Yes： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ 抗血小板药物, data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ 抗血小板药物, data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data["冠心病"]==0, ]
+col <- "抗血小板药物"
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- No： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ 抗血小板药物, data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ 抗血小板药物, data = data.m.hypertension)
+summary(model)
+```
+
+
+
+```{r}
+cols <- c('抗贫血药', '磷酸钠盐', '维生素', '甘脯二肽氨基肽酶偏低',
+       '骨矿物质代谢异常', '抗凝血药', '乙肝病毒指标异常', '钙离子通道阻滞剂', 
+       '氨基酸', '脂异常')
+
+t1 <- table(data$CLUSTER, data[["抗贫血药"]])
+t2 <- table(data$CLUSTER, data[["贫血"]])
+t1
+t2
+
+a <- t1[1,2]/(t1[1,2] + t2[1,2])
+b <- t1[2,2]/(t1[2,2] + t2[2,2])
+print(a)
+print(b)
+print(a/b)
+
+
+print("----------------------------------  Ratios: ----------------------------------")
+print(t1[1,2]/t2[1,2])
+print(t1[2,2]/t2[2,2])
+print((t1[1,2]/t2[1,2])/(t1[2,2]/t2[2,2]))
+
+
+data.gxb <- data
+col <- "抗贫血药"
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "optimal", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- all data： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data["贫血"]==1, ]
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "optimal", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- Yes： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data["贫血"]==0, ]
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "optimal", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- No： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+```
+
+
+```{r}
+cols <- c('磷酸钠盐', '维生素', '甘脯二肽氨基肽酶偏低',
+       '骨矿物质代谢异常', '抗凝血药', '乙肝病毒指标异常', '钙离子通道阻滞剂', 
+       '氨基酸', '脂异常')
+
+t1 <- table(data$CLUSTER, data[["抗凝血药"]])
+t2 <- table(data$CLUSTER, data[["血栓指标异常"]])
+t1
+t2
+
+a <- t1[1,2]/(t1[1,2] + t2[1,2])
+b <- t1[2,2]/(t1[2,2] + t2[2,2])
+print(a)
+print(b)
+print(a/b)
+
+
+print("----------------------------------  Ratios: ----------------------------------")
+print(t1[1,2]/t2[1,2])
+print(t1[2,2]/t2[2,2])
+print((t1[1,2]/t2[1,2])/(t1[2,2]/t2[2,2]))
+
+
+data.gxb <- data
+col <- "抗凝血药"
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- all data： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data["血栓指标异常"]==1, ]
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- Yes： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data["血栓指标异常"]==0, ]
+m.hypertension <- matchit(data.gxb[[col]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- No： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col]], data = data.m.hypertension)
+summary(model)
+```
+
+
+```{r}
+cols <- c('磷酸钠盐', '维生素', '甘脯二肽氨基肽酶偏低',
+       '骨矿物质代谢异常', '抗凝血药', '乙肝病毒指标异常', '钙离子通道阻滞剂', 
+       '氨基酸', '脂异常')
+
+col1 <- "骨化三醇"
+col2 <- "骨矿物质代谢异常"
+t1 <- table(data$CLUSTER, data[[col1]])
+t2 <- table(data$CLUSTER, data[[col2]])
+
+t1
+t2
+
+a <- t1[1,2]/(t1[1,2] + t2[1,2])
+b <- t1[2,2]/(t1[2,2] + t2[2,2])
+print(a)
+print(b)
+print(a/b)
+
+
+print("----------------------------------  Ratios: ----------------------------------")
+print(t1[1,2]/t2[1,2])
+print(t1[2,2]/t2[2,2])
+print((t1[1,2]/t2[1,2])/(t1[2,2]/t2[2,2]))
+  
+data.gxb <- data
+
+m.hypertension <- matchit(data.gxb[[col1]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- all data： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data[col2]==1, ]
+m.hypertension <- matchit(data.gxb[[col1]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- Yes： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data[col2]==0, ]
+m.hypertension <- matchit(data.gxb[[col1]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- No： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+```
+
+
+
+
+```{r}
+cols <- c('磷酸钠盐', '维生素', '甘脯二肽氨基肽酶偏低',
+       '骨矿物质代谢异常', '抗凝血药', '乙肝病毒指标异常', '钙离子通道阻滞剂', 
+       '氨基酸', '脂异常')
+
+col1 <- "调血脂药"
+col2 <- "脂异常"
+t1 <- table(data$CLUSTER, data[[col1]])
+t2 <- table(data$CLUSTER, data[[col2]])
+
+t1
+t2
+
+a <- t1[1,2]/(t1[1,2] + t2[1,2])
+b <- t1[2,2]/(t1[2,2] + t2[2,2])
+print(a)
+print(b)
+print(a/b)
+
+
+print("----------------------------------  Ratios: ----------------------------------")
+print(t1[1,2]/t2[1,2])
+print(t1[2,2]/t2[2,2])
+print((t1[1,2]/t2[1,2])/(t1[2,2]/t2[2,2]))
+
+
+  
+data.gxb <- data
+
+m.hypertension <- matchit(data.gxb[[col1]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- all data： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data[col2]==1, ]
+m.hypertension <- matchit(data.gxb[[col1]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- Yes： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+
+data.gxb <- data[data[col2]==0, ]
+m.hypertension <- matchit(data.gxb[[col1]] ~ 对疾病认识 + 年龄 + BMI + 性别, data = data.gxb, method = "nearest", ratio = 1)
+# m.hypertension
+
+# summary(m.hypertension)
+data.m.hypertension <- match.data(m.hypertension)
+
+print("---------------------------------- No： --------------------------------------")
+print("---------------------------------- 死亡： --------------------------------------")
+model <- coxph(Surv(time, 死亡) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+
+print("---------------------------------- 肾移植： --------------------------------------")
+model <- coxph(Surv(time, 肾移植) ~ data.m.hypertension[[col1]], data = data.m.hypertension)
+summary(model)
+```
+
+
+
+
+
+
+
