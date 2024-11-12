@@ -37,29 +37,6 @@ names(testdata)[10] <- "Disease.awareness"
 ```
 
 
-```{r}
-set.seed(123456)
-# train.pid <- read.csv("train_pid.csv")
-# test.pid <- read.csv("test_pid.csv")
-# 
-# data <- rbind(traindata, testdata)
-# 
-# traindata <- data[data$PERSON_ID %in% train.pid$PERSON_ID, ]
-# testdata <- data[data$PERSON_ID %in% test.pid$PERSON_ID, ]
-
-## 2120 1048
-traindata.1 <- traindata[traindata$death == 1, ]
-traindata.2 <- traindata.1[traindata.1$PERSON_ID %in% sample(traindata.1$PERSON_ID, size=28, replace=FALSE),]
-traindata.3 <- traindata[traindata$kidney.trans == 1, ]
-traindata.4 <- traindata.3[traindata.3$PERSON_ID %in% sample(traindata.3$PERSON_ID, size=718, replace=FALSE),]
-traindata.5 <- traindata[traindata$death == 0 & traindata$kidney.trans == 0, ]
-traindata.6 <- traindata.5[traindata.5$PERSON_ID %in% sample(traindata.5$PERSON_ID, size=1242, replace=FALSE),]
-traindata <- rbind(traindata.1, traindata.2, traindata.4, traindata.6)
-
-testdata <- testdata[sample(testdata$PERSON_ID, size=1048, replace=TRUE) %in% testdata$PERSON_ID,]
-```
-
-
 ## 数据准备
 ```{r}
 traindata[["Subphenotype"]] <- factor(traindata[["Subphenotype"]], labels = c("Subphenotype 1", "Subphenotype 2"))
