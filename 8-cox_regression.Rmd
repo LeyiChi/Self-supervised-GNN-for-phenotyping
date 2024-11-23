@@ -68,7 +68,6 @@ testdata$time <- testdata$time/365.25
 
 ```{r}
 data <- rbind(traindata, testdata)
-data <- data[data$time < 100, ]
 t1 <- data[data$Subphenotype==0, ]
 t2 <- data[data$Subphenotype==1, ]
 

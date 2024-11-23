@@ -24,17 +24,9 @@ data$height <- as.numeric(data$height)
 data$weight <- as.numeric(data$weight)
 
 data$BMI <- data$weight/data$height/data$height * 10000
-data[is.infinite(data$BMI), "BMI"] <- NA
 ```
 
 ### categorical var
-```{r}
-# subohenotype
-data[data$CLUSTER == 4, 'CLUSTER']  <- 1
-data[data$CLUSTER == 6, 'CLUSTER']  <- 2
-```
-
-
 ```{r}
 # 性别
 levels(factor(data$性别))
@@ -103,8 +95,6 @@ myVars <- c(contVars, catVars)
 ```{r}
 data[data$结局事件 == "转出", "结局事件"] <- "维持血透"
 data[data$结局事件 == "急性肾病", "结局事件"] <- "维持血透"
-# data[data$结局事件 == "腹透", "结局事件"] <- "血透失败"
-# data[data$结局事件 == "肾移植", "结局事件"] <- "血透失败"
 ```
 
 ```{r}

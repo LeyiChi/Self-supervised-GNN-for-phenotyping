@@ -61,11 +61,10 @@ df.loc[df['YRS']==0, 'YRS'] = 1
 # In[7]:
 
 
-lable_color = {1:'#79A3D9', 2:'#7B967A', 3:'#F9C77E', 4:'#CE4257'}
+lable_color = {1:'#79A3D9', 2:'#7B967A', 3:'#F9C77E'}
 lable_annotation = {1:'Topic 1',
                     2:'Topic 2',
                     3:'Topic 3',
-                    4:'Topic 4',
                     }  
 
 

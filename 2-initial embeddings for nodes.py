@@ -1,19 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
 
 import pandas as pd
 import numpy as np
 from tqdm.notebook import tqdm
 import time
 import pickle
-
-
-# In[2]:
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,14 +14,7 @@ import torch.nn.functional as F
 
 # ## Load data
 
-# In[3]:
-
-
 df = pd.read_csv("data/data_0919.csv")
-df.head()
-
-
-# In[4]:
 
 
 vidEventMap = {}
@@ -40,8 +26,6 @@ for i in tqdm(range(len(df))):
     else: 
         vidEventMap[vid] = [event]
 
-
-# In[5]:
 
 
 pidVidMap = {}
@@ -57,24 +41,14 @@ for key in pidVidMap:
     pidVidMap[key] = list(set(pidVidMap[key]))
 
 
-
-
 # ### word embedding for events using CBOW
-
-# In[6]:
 
 
 from gensim.test.utils import common_texts
 from gensim.models import Word2Vec
 
 
-# In[7]:
-
-
 text = list(vidEventMap.values())
-
-
-# In[8]:
 
 
 try:
@@ -82,9 +56,6 @@ try:
 except:
     model = Word2Vec(sentences=text, vector_size=100, window=5, min_count=1, workers=4, epochs=100)
     model.save("model_0919/cbow.model")
-
-
-# In[11]:
 
 
 vidEmbedMap = {}
@@ -96,31 +67,17 @@ for visit in vidEventMap:
 
 
 
-
-
 # ### initial embeddings for the visited nodes using an LSTM autoencoder model. 
-
-# In[12]:
-
 
 from LSTMAE import RecurrentAutoencoder
 import random
 
 
-# In[3]:
-
-
 device = ('cuda' if torch.cuda.is_available() else 'cpu')
-
-
-# In[14]:
 
 
 INPUT_FEATURES_NUM = 100
 OUTPUT_FEATURES_NUM = 100
-
-
-# In[15]:
 
 
 def train_event_lstm_enhanced(model):
@@ -170,8 +127,6 @@ def train_event_lstm_enhanced(model):
     return model
 
 
-# In[16]:
-
 
 try:
     lstm_model_enhanced = torch.load("model_0919/event_lstm_enhanced.pkl")
@@ -181,8 +136,6 @@ except:
     print('LSTM model:', lstm_model_enhanced)
     torch.save(lstm_model_enhanced, 'model_0919/event_lstm_enhanced.pkl')
 
-
-# In[17]:
 
 
 with torch.no_grad():
@@ -194,8 +147,6 @@ with torch.no_grad():
         visit_embeddings_enhanced[visit] = np.array(output_c[-1].view(-1).cpu())
 
 
-# In[78]:
-
 
 with open('model_0919/visit_embeddings_enhanced.pkl', "wb") as f:
     pickle.dump(visit_embeddings_enhanced, f)
@@ -205,9 +156,6 @@ with open('model_0919/visit_embeddings_enhanced.pkl', "wb") as f:
 
 
 # ### initial embeddings for the patient nodes using an LSTM autoencoder model.
-
-# In[18]:
-
 
 def train(model):
     max_epochs = 30
@@ -247,9 +195,6 @@ def train(model):
     return model
 
 
-# In[19]:
-
-
 try:
     visit_lstm_model = torch.load("model_0919/visit_lstm.pkl")
 except:
@@ -257,9 +202,6 @@ except:
     visit_lstm_model = train(visit_lstm_model)
     print('LSTM model:', visit_lstm_model)
     torch.save(visit_lstm_model, 'model_0919/visit_lstm.pkl')
-
-
-# In[20]:
 
 
 with torch.no_grad():
@@ -275,31 +217,16 @@ with torch.no_grad():
         patient_embeddings[patient] = np.array(output_c[-1].view(-1).cpu())
 
 
-# In[82]:
-
-
 with open('model_0919/patient_embeddings.pkl', "wb") as f:
     pickle.dump(patient_embeddings, f)
 
 
-# In[ ]:
-
-
-
-
-
 # ### visualization of the distribution of nodes
-
-# In[21]:
-
 
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.cluster import DBSCAN
 from sklearn.manifold import TSNE
-
-
-# In[22]:
 
 
 count = 0
@@ -312,17 +239,11 @@ for event in set(df['EVENT']):
 event_embed = np.array(event_embed)
 
 
-# In[23]:
-
-
 count = 0
 visit_index = {}
 for visit in visit_embeddings_enhanced:
     visit_index[visit] = count
     count += 1
-
-
-# In[24]:
 
 
 count = 0
@@ -335,19 +256,12 @@ for patient in patient_embeddings:
 
 # #### patient embeddings
 
-# In[131]:
-
 
 import csv
 
 
-# In[110]:
-
-
 df_result = pd.read_csv("data/patient_label.csv")
 
-
-# In[111]:
 
 
 print('outcomes：', set(df_result['outcome']))

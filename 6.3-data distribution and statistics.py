@@ -294,11 +294,6 @@ for i in range(3):
         else:
             time_pval = "{:.3f}".format(time_pval)
         
-        # 存入dataframe
-#         res.loc[len(res)] = [event_type, event, 
-#                              n_1, freq_in_1, freq_out_1, days_1,
-#                              n_2, freq_in_2, freq_out_2, days_2,
-#                              p_value]
         res.loc[len(res)] = [event_type, event, 
                              n_1, freq_in_1, freq_out_1, median[1],
                              n_2, freq_in_2, freq_out_2, median[2],

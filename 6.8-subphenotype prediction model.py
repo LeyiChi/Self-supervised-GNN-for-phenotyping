@@ -217,17 +217,12 @@ df_fst_visit = df_fst_visit.reset_index()
 
 # basic info
 basic_col = ['性别', '年龄', '身高', '体重', 'BMI', '吸烟', '饮酒', '对疾病认识', '药物依赖.药瘾.吸毒']
-drop_list = ['PERSON_ID', '身高', '体重', '标本溶血程度偏高', '标本脂浊程度偏高', '移植术', '肾病综合征', 
-             '肾炎', '吗替麦考酚酯', '高渗枸橼酸盐嘌呤', '复方α酮酸',
-             '高血压', '甲状旁腺切除术', '血常规异常', '精神类药物', '磷酸钠盐', # '心脑血管指标异常',
-             '利多卡因', '左卡尼汀'] # '钙补充剂', '钙离子通道阻滞剂', '凝血功能异常', 
 
 
 # In[30]:
 
 
 X_train_fst = df_train[['PERSON_ID'] + basic_col].merge(df_fst_visit, how = 'left')
-X_train_fst = X_train_fst.drop(drop_list, axis=1)
 X_train_fst = X_train_fst.fillna(0)
 
 
@@ -235,13 +230,11 @@ X_train_fst = X_train_fst.fillna(0)
 
 
 X_test_fst = df_test[['PERSON_ID'] + basic_col].merge(df_fst_visit, how = 'left')
-X_test_fst = X_test_fst.drop(drop_list, axis=1)
 X_test_fst = X_test_fst.fillna(0)
 
 
 # #### start feature selection
 
-# In[32]:
 
 
 import lightgbm as lgb

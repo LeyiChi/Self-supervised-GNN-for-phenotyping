@@ -54,7 +54,6 @@ testdata$time <- testdata$time/365.25
 
 ```{r}
 data <- rbind(traindata, testdata)
-data.tmp <- data[data$time < 100, ]
 t1 <- data.tmp[data.tmp$CLUSTER=="Subphenotype 1", ]
 t2 <- data.tmp[data.tmp$CLUSTER=="Subphenotype 2", ]
 
@@ -65,15 +64,8 @@ ggplot(aes(x=time, fill=CLUSTER), data=data.tmp) +
 
 
 ```{r}
-train.pid <- read.csv("train_pid.csv")
-test.pid <- read.csv("test_pid.csv")
-
-traindata <- data[data$PERSON_ID %in% train.pid$PERSON_ID, ]
-
 data <- traindata
 
-round(sum(data$time < 1 & data$死亡 == 1)/dim(data)[1] * 100, 2)
-round(sum(data$time < 5 & data$死亡 == 1)/dim(data)[1] * 100, 2)
 ```
 
 

@@ -30,18 +30,8 @@ version = '0919'
 df = pd.read_csv("data/data_"+version+".csv")
 df.drop_duplicates(inplace = True)
 df = df.reset_index(drop=True)
-df.head()
 
 
-# In[12]:
-
-
-print('patient: ', len(set(df['PERSON_ID'])))
-print('visit: ', len(set(df['VISIT_OCCURRENCE_ID'])))
-print('event: ', len(set(df['EVENT'])))
-
-
-# In[13]:
 
 
 from collections import defaultdict
